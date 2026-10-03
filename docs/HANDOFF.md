@@ -49,9 +49,9 @@ Native-only gaps that stay documented, not fixed: `/memory` command integration,
 - Symlink and `config.yml` install methods on a clean omp.
 - `qwen2.5:1.5b` through `supermemory-server` (it wraps JSON in a markdown fence; may fail strict parsing).
 
-- Self-hosted server: `/tmp/smdocker` was a temporary clone of https://github.com/Ansh-Sonkusare/supermemory-docker; re-clone if `/tmp` was cleared. `.env` used `OPENAI_BASE_URL=http://host.docker.internal:11434/v1`. Start with `docker compose up -d --build` (OrbStack: `orb start`). Key: `docker compose exec -T supermemory cat /data/api-key`. Recommended `SUPERMEMORY_THRESHOLD=0.3` locally.
+## Local environment
 
-- Self-hosted server: `~/../../tmp/smdocker` was a temporary clone of https://github.com/Ansh-Sonkusare/supermemory-docker; re-clone if `/tmp` was cleared. `.env` used `OPENAI_BASE_URL=http://host.docker.internal:11434/v1`. Start with `docker compose up -d --build` (OrbStack: `orb start`). Key: `docker compose exec -T supermemory cat /data/api-key`. Recommended `SUPERMEMORY_THRESHOLD=0.3` locally.
+- Self-hosted server: `/tmp/smdocker` was a temporary clone of https://github.com/Ansh-Sonkusare/supermemory-docker; re-clone if `/tmp` was cleared. `.env` used `OPENAI_BASE_URL=http://host.docker.internal:11434/v1`. Start with `docker compose up -d --build` (OrbStack: `orb start`). Key: `docker compose exec -T supermemory cat /data/api-key`. Recommended `SUPERMEMORY_THRESHOLD=0.3` locally.
 - Ollama models on disk: `qwen2.5:7b` (4.7 GB), `qwen2.5:1.5b` (986 MB, Q4_K_M; ~0.8 s vs ~2.6 s per extraction, coarser facts). Use 1.5b for tests.
 - Port 8787 is taken by the headroom proxy; the mock server (`scripts/mock-server.ts`) defaults to 8787, so pass another port (e.g. `18787`).
 - All services (Supermemory container, Ollama, mock) are stopped.

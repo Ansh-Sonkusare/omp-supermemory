@@ -1,0 +1,25 @@
+{
+  "name": "omp-supermemory",
+  "version": "0.1.0",
+  "description": "Persistent memory for oh-my-pi (omp) backed by Supermemory",
+  "type": "module",
+  "license": "MIT",
+  "author": "Ansh Sonkusare",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ansh-Sonkusare/omp-supermemory.git"
+  },
+  "keywords": ["omp", "oh-my-pi", "supermemory", "memory", "extension", "ai-agent"],
+  "omp": {
+    "extensions": ["./src/index.ts"]
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@oh-my-pi/pi-coding-agent": "^18.4.2",
+    "@types/bun": "latest",
+    "typescript": "^5.6.0"
+  }
+}

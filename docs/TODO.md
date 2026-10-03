@@ -19,7 +19,8 @@
 - [ ] Retry `forget` on 409 while a document is still processing
 
 ## Later
-- [ ] Native `memory.backend: supermemory` in omp fork (`Ansh-Sonkusare/oh-my-pi`, branch `feat/supermemory-memory-backend`); upstream PR pending owner
+- [x] Native `memory.backend: supermemory` in omp fork: branch `feat/supermemory-memory-backend` on `Ansh-Sonkusare/oh-my-pi`, verified in the fork CLI against self-hosted server
+- [ ] Open upstream PR (owner); 1,644 added lines, so consider splitting into client+settings / backend / tools+docs
 - [ ] Inject memory context on compaction
 - [ ] Redact secrets from transcripts before capture
 - [ ] Per-user opt-out tags

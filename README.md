@@ -50,6 +50,15 @@ export SUPERMEMORY_API_URL=http://127.0.0.1:6767
 export SUPERMEMORY_API_KEY=$(docker compose exec -T supermemory cat /data/api-key)
 ```
 
+Fully local (no hosted LLM): point the server at Ollama or `llama-server` (llama.cpp), both OpenAI-compatible. Tested with `qwen2.5:7b`:
+
+```sh
+# .env
+OPENAI_API_KEY=dummy
+OPENAI_BASE_URL=http://host.docker.internal:11434/v1   # llama-server: http://host.docker.internal:8080/v1
+OPENAI_MODEL=qwen2.5:7b
+```
+
 Notes from testing against `supermemory-server` v0.0.8:
 
 - First request after boot downloads the embedding model (~1 min); recall times out until it finishes.

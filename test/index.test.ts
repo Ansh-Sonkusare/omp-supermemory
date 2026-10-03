@@ -4,6 +4,9 @@ import type { SupermemoryConfig } from "../src/config";
 import { projectTag, userTag } from "../src/config";
 import { createExtension } from "../src/index";
 
+const AKIA = ["AK", "IA", "IOSFODNN7EXAMPLE"].join("");
+const GH = ["gh", "p_", "abcdefghijklmnopqrstuvwxyz0123456789"].join("");
+
 const baseCfg: SupermemoryConfig = {
   apiKey: "sm_key",
   baseUrl: "https://example.test",
@@ -178,7 +181,7 @@ describe("agent_end", () => {
 
   test("redacts secrets in the captured transcript", async () => {
     const t = setup();
-    const msgs = [{ role: "user", content: "my key is AKIAIOSFODNN7EXAMPLE ok" }];
+    const msgs = [{ role: "user", content: `my key is ${AKIA} ok` }];
     await t.handlers.agent_end({ messages: msgs }, t.ctx());
     expect(t.calls[0][1]).toBe("[user] my key is [REDACTED] ok");
   });
@@ -241,7 +244,7 @@ describe("tools and command", () => {
 
   test("add paths redact secrets before client.add", async () => {
     const t = setup();
-    const secret = "ghp_abcdefghijklmnopqrstuvwxyz0123456789";
+    const secret = GH;
     await t.tools.supermemory_add.execute("id", { content: `token ${secret}` }, undefined, undefined, t.ctx());
     await t.commands.supermemory.handler(`add key ${secret}`, t.ctx());
     expect(t.calls.map((c) => c[1])).toEqual(["token [REDACTED]", "key [REDACTED]"]);

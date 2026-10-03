@@ -15,11 +15,30 @@ export class SupermemoryError extends Error {
   }
 }
 
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  const { promise, resolve, reject } = Promise.withResolvers<void>();
+  if (signal?.aborted) {
+    reject(signal.reason);
+    return promise;
+  }
+  const onAbort = () => {
+    clearTimeout(timer);
+    reject(signal!.reason);
+  };
+  const timer = setTimeout(() => {
+    signal?.removeEventListener("abort", onAbort);
+    resolve();
+  }, ms);
+  signal?.addEventListener("abort", onAbort, { once: true });
+  return promise;
+}
+
 interface ClientConfig {
   apiKey: string;
   baseUrl: string;
   fetch?: typeof fetch;
   timeoutMs?: number;
+  retryDelaysMs?: number[];
 }
 
 export class SupermemoryClient {
@@ -104,11 +123,25 @@ export class SupermemoryClient {
 
   async forget(id: string, containerTag: string, signal?: AbortSignal): Promise<void> {
     try {
-      await this.#request("DELETE", "/v4/memories", { id, containerTag }, signal);
+      await this.#deleteRetrying409("/v4/memories", { id, containerTag }, signal);
     } catch (e) {
       // Hybrid search returns chunks whose id is a document-chunk id, not a memory id.
       if (!(e instanceof SupermemoryError) || e.status !== 404) throw e;
-      await this.#request("DELETE", `/v3/documents/${encodeURIComponent(id)}`, undefined, signal);
+      await this.#deleteRetrying409(`/v3/documents/${encodeURIComponent(id)}`, undefined, signal);
+    }
+  }
+
+  // 409 means the server is still processing the document; wait and retry.
+  async #deleteRetrying409(path: string, body: unknown, signal?: AbortSignal): Promise<void> {
+    const delays = this.#cfg.retryDelaysMs ?? [1000, 2000, 4000, 8000];
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await this.#request("DELETE", path, body, signal);
+        return;
+      } catch (e) {
+        if (!(e instanceof SupermemoryError) || e.status !== 409 || attempt >= delays.length) throw e;
+      }
+      await sleep(delays[attempt]!, signal);
     }
   }
 }

@@ -3,6 +3,7 @@ import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 import { SupermemoryClient, type MemoryHit } from "./client";
 import { loadConfig as realLoadConfig, projectTag, userTag, type SupermemoryConfig } from "./config";
 import { formatRecall, transcriptFromMessages } from "./format";
+import { redactMemorySecrets } from "./redact";
 
 type ClientLike = Pick<SupermemoryClient, "search" | "profile" | "add" | "forget">;
 
@@ -73,7 +74,7 @@ export function createExtension(deps: Deps = {}) {
       const transcript = transcriptFromMessages(event.messages);
       if (!transcript) return;
       client
-        .add(transcript, projectTag(ctx.cwd), {
+        .add(redactMemorySecrets(transcript), projectTag(ctx.cwd), {
           customId: `omp_session_${sessionId}`,
           metadata: { source: "omp", sessionId, project: basename(ctx.cwd) },
         })
@@ -115,7 +116,7 @@ export function createExtension(deps: Deps = {}) {
       async execute(_id, params: { content: string; scope?: "user" | "project" }, signal, _onUpdate, ctx) {
         if (!client) return text(NO_KEY);
         const scope = params.scope ?? "project";
-        const { id } = await client.add(params.content, tagFor(scope, ctx.cwd), { signal });
+        const { id } = await client.add(redactMemorySecrets(params.content), tagFor(scope, ctx.cwd), { signal });
         return text(`Saved to ${scope} memory (id: ${id}).`, { id, scope });
       },
     });
@@ -160,7 +161,7 @@ export function createExtension(deps: Deps = {}) {
         if (!arg) return ctx.ui.notify(`Usage: /supermemory ${sub} <${sub === "add" ? "text" : "query"}>`, "info");
         try {
           if (sub === "add") {
-            const { id } = await client.add(arg, projectTag(ctx.cwd));
+            const { id } = await client.add(redactMemorySecrets(arg), projectTag(ctx.cwd));
             ctx.ui.notify(`Saved to project memory (id: ${id}).`, "info");
             return;
           }

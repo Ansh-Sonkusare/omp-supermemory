@@ -37,7 +37,15 @@ function sequence(responses: { status: number; payload: string | null }[]) {
     const r = responses[i++]!;
     return new Response(r.payload, { status: r.status });
   }) as unknown as typeof fetch;
-  return { calls, client: new SupermemoryClient({ apiKey: "sk-test", baseUrl: "https://sm.test", fetch: fakeFetch }) };
+  return {
+    calls,
+    client: new SupermemoryClient({
+      apiKey: "sk-test",
+      baseUrl: "https://sm.test",
+      fetch: fakeFetch,
+      retryDelaysMs: [0, 0, 0, 0],
+    }),
+  };
 }
 
 describe("SupermemoryClient", () => {
@@ -137,6 +145,73 @@ describe("SupermemoryClient", () => {
     expect(err.status).toBe(404);
     expect(err.message).toContain("Document not found");
     expect(calls.map(c => c.url)).toEqual(["https://sm.test/v4/memories", "https://sm.test/v3/documents/x"]);
+  });
+
+  test("forget retries the document delete on 409 until it succeeds", async () => {
+    const { calls, client } = sequence([
+      { status: 404, payload: "Memory not found" },
+      { status: 409, payload: "Document is still processing" },
+      { status: 409, payload: "Document is still processing" },
+      { status: 204, payload: null },
+    ]);
+    await client.forget("d1", "tag1");
+    expect(calls).toEqual([
+      { url: "https://sm.test/v4/memories", method: "DELETE", headers, body: { id: "d1", containerTag: "tag1" } },
+      { url: "https://sm.test/v3/documents/d1", method: "DELETE", headers, body: undefined },
+      { url: "https://sm.test/v3/documents/d1", method: "DELETE", headers, body: undefined },
+      { url: "https://sm.test/v3/documents/d1", method: "DELETE", headers, body: undefined },
+    ]);
+  });
+
+  test("forget throws 409 after 5 attempts", async () => {
+    const processing = { status: 409, payload: "Document is still processing" };
+    const { calls, client } = sequence([
+      { status: 404, payload: "Memory not found" },
+      processing,
+      processing,
+      processing,
+      processing,
+      processing,
+    ]);
+    const err = await client.forget("d1", "tag1").catch(e => e);
+    expect(err).toBeInstanceOf(SupermemoryError);
+    expect(err.status).toBe(409);
+    expect(calls.map(c => c.url)).toEqual([
+      "https://sm.test/v4/memories",
+      "https://sm.test/v3/documents/d1",
+      "https://sm.test/v3/documents/d1",
+      "https://sm.test/v3/documents/d1",
+      "https://sm.test/v3/documents/d1",
+      "https://sm.test/v3/documents/d1",
+    ]);
+  });
+
+  test("forget does not retry a 500 from the document delete", async () => {
+    const { calls, client } = sequence([
+      { status: 404, payload: "Memory not found" },
+      { status: 500, payload: "boom" },
+    ]);
+    const err = await client.forget("d1", "tag1").catch(e => e);
+    expect(err.status).toBe(500);
+    expect(calls.map(c => c.url)).toEqual(["https://sm.test/v4/memories", "https://sm.test/v3/documents/d1"]);
+  });
+
+  test("forget abort cancels the 409 backoff wait", async () => {
+    let n = 0;
+    const ac = new AbortController();
+    const client = new SupermemoryClient({
+      apiKey: "sk-test",
+      baseUrl: "https://sm.test",
+      fetch: (async () => {
+        n++;
+        ac.abort(new Error("stop"));
+        return new Response("Document is still processing", { status: 409 });
+      }) as unknown as typeof fetch,
+      retryDelaysMs: [60_000],
+    });
+    const err = await client.forget("d1", "tag1", ac.signal).catch(e => e);
+    expect(err.message).toBe("stop");
+    expect(n).toBe(1);
   });
 
   test("non-2xx throws SupermemoryError with status and body", async () => {

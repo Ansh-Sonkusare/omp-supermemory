@@ -175,6 +175,13 @@ describe("agent_end", () => {
     await flush();
     expect(t.notes).toEqual([["Supermemory capture failed: down", "warning"]]);
   });
+
+  test("redacts secrets in the captured transcript", async () => {
+    const t = setup();
+    const msgs = [{ role: "user", content: "my key is AKIAIOSFODNN7EXAMPLE ok" }];
+    await t.handlers.agent_end({ messages: msgs }, t.ctx());
+    expect(t.calls[0][1]).toBe("[user] my key is [REDACTED] ok");
+  });
 });
 
 describe("tools and command", () => {
@@ -230,6 +237,14 @@ describe("tools and command", () => {
       ["- [user] u1: likes tabs (similarity 0.90)", "info"],
     ]);
     expect(t.calls[0]).toEqual(["add", "remember this", projectTag("/work/proj"), undefined]);
+  });
+
+  test("add paths redact secrets before client.add", async () => {
+    const t = setup();
+    const secret = "ghp_abcdefghijklmnopqrstuvwxyz0123456789";
+    await t.tools.supermemory_add.execute("id", { content: `token ${secret}` }, undefined, undefined, t.ctx());
+    await t.commands.supermemory.handler(`add key ${secret}`, t.ctx());
+    expect(t.calls.map((c) => c[1])).toEqual(["token [REDACTED]", "key [REDACTED]"]);
   });
 });
 
